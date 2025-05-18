@@ -1,0 +1,131 @@
+/* Title Screen Container */
+.title-screen {
+  position: relative;
+  width: 360px; /* Same size as other elements */
+  height: 600px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px; /* Slightly increased border radius */
+  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2); /* Enhanced shadow for better depth */
+  overflow: hidden;
+  color: #ffffff; /* Title text color */
+  text-shadow: 0px 3px 6px rgba(0, 0, 0, 0.8); /* Stronger text shadow for better visibility */
+  padding: 20px; /* Added padding for better spacing */
+}
+
+/* Title Styling */
+.title {
+  font-family: 'pixel', sans-serif; /* Custom font */
+  font-size: 2.8rem; /* Increased font size for better visibility */
+  margin-bottom: 40px; /* Larger spacing below the title */
+  text-align: center;
+  line-height: 1.2; /* Adjusted line height for better readability */
+}
+
+/* Button Container */
+.button-container {
+  font-family: 'pixel', sans-serif; /* Custom font */
+  display: flex;
+  flex-direction: column; /* Stack buttons vertically */
+  gap: 20px; /* Increased space between buttons */
+  width: 90%; /* Slightly wider container for buttons */
+  align-items: center;
+}
+
+/* Button Styling */
+.button {
+  width: 100%; /* Full width of container */
+  height: 75px; /* Increased height for larger buttons */
+  background-image: url('../assets/button.png'); /* Replace with your button image */
+  background-size: 100% 100%; /* Stretch image to fit both width and height */
+  background-color: transparent;
+  background-position: center;
+  border: none; /* Remove default button border */
+  border-radius: 12px; /* Slightly larger rounded corners */
+  cursor: pointer; /* Pointer cursor on hover */
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, background-color 0.3s ease-in-out;
+  image-rendering: pixelated; /* Preserve pixel art sharpness */
+  font-size: 1.2rem; /* Adjusted font size for better readability */
+  color: #fff; /* Ensure button text is white */
+  text-transform: uppercase; /* Ensure text is capitalized */
+  display: flex; /* Center text inside the button */
+  align-items: center;
+  justify-content: center;
+}
+
+.button:hover {
+  transform: scale(1.1); /* Enlarge button slightly on hover */
+  box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.3); /* Add stronger shadow effect on hover */
+  background-color: rgba(255, 255, 255, 0.15); /* Add subtle color overlay on hover */
+}
+
+.button:active {
+  transform: scale(0.95); /* Shrink button slightly on active click */
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); /* Slightly reduce shadow on click */
+}
+
+@media (max-width: 768px) {
+  .title-screen {
+    width: 100vw;
+    height: 100vh;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .title {
+    font-size: 2.2rem;
+    margin-bottom: 25px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .button-container {
+    width: 90%;
+    max-width: 320px;
+    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  .button {
+    width: 100%;
+    max-width: 300px;
+    height: 100px;
+    font-size: 1rem;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.8rem;
+    text-align: center;
+  }
+
+  .button-container {
+    gap: 20px;
+  }
+
+  .button {
+    height: 55px;
+    font-size: 0.9rem;
+    max-width: 240px;
+    width: 100%;
+  }
+}

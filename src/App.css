@@ -1,0 +1,39 @@
+body, html, #root {
+  margin: 0;
+  height: 100vh;
+  display: relative;
+  justify-content: center;
+  align-items: center;
+  background-color: #f4f4f4;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.app-container {
+  display: relative;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.sidebar {
+  width: 300px;
+  background-color: #0077cc;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.game-container {
+  width: 300px;
+  height: 600px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 2px solid #ccc;
+  background-color: #f9f9f9;
+}
