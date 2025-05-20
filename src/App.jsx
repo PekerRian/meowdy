@@ -108,7 +108,7 @@ function UsernameModal({ onSubmit, loading, initialValue }) {
 export default function App() {
   const [activeLayer, setActiveLayer] = useState("title");
   const [walletAddress, setWalletAddress] = useState("");
-  const [userProfile, setUserProfile] = useState(null); // { accountAddress, username, highscore }
+  const [userProfile, setUserProfile] = useState(null);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [usernameLoading, setUsernameLoading] = useState(false);
   const [meowdyCount, setMeowdyCount] = useState(1);
@@ -118,6 +118,11 @@ export default function App() {
   // For copy-to-clipboard popup
   const [copied, setCopied] = useState(false);
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
+
+  // Set browser tab title (general usage)
+  useEffect(() => {
+    document.title = "Meowdy Flight";
+  }, []);
 
   // On wallet connect, check/create user, and show username modal if needed
   useEffect(() => {
@@ -156,7 +161,6 @@ export default function App() {
       const usernameQuery = query(usersRef, where("username", "==", cleanUsername));
       const usernameSnap = await getDocs(usernameQuery);
       if (!usernameSnap.empty) {
-        // Prevent duplicate usernames
         alert("Username is already taken, please choose another.");
         setUsernameLoading(false);
         return;
@@ -173,7 +177,6 @@ export default function App() {
       if (snapshot.empty) {
         await addDoc(usersRef, userData);
       } else {
-        // Update existing doc with new username
         await updateDoc(snapshot.docs[0].ref, { username: cleanUsername });
         userData = { ...snapshot.docs[0].data(), username: cleanUsername };
       }
@@ -207,20 +210,17 @@ export default function App() {
       // Save ONLY IF the new score is higher than highscore (users) and leaderboard (for wallet)
       if (walletAddress) {
         try {
-          // Update leaderboard with only the highest score per wallet
           const leaderboardRef = collection(db, "leaderboard");
           const userQuery = query(leaderboardRef, where("username", "==", walletAddress));
           const userSnap = await getDocs(userQuery);
 
           if (userSnap.empty) {
-            // No entry yet, add new
             await addDoc(leaderboardRef, {
               username: walletAddress,
               score: score,
               timestamp: new Date(),
             });
           } else {
-            // Already exists; update if this score is higher
             const userDoc = userSnap.docs[0];
             const prevScore = userDoc.data().score;
             if (score > prevScore) {
@@ -231,7 +231,6 @@ export default function App() {
             }
           }
 
-          // Update users collection highscore if needed
           if (userProfile && score > (userProfile.highscore || 0)) {
             const usersRef = collection(db, "users");
             const userQ = query(usersRef, where("accountAddress", "==", walletAddress));
@@ -269,11 +268,9 @@ export default function App() {
     resetGame();
   };
 
-  // Fetch leaderboard data and map wallet addresses to usernames
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        // Step 1: Get all leaderboard entries, order by score
         const leaderboardQuery = query(
           collection(db, "leaderboard"),
           orderBy("score", "desc"),
@@ -282,7 +279,6 @@ export default function App() {
         const querySnapshot = await getDocs(leaderboardQuery);
         const scoresRaw = querySnapshot.docs.map((doc) => doc.data());
 
-        // Step 2: Use a Map to guarantee only one (highest) entry per account
         const unique = new Map();
         for (const entry of scoresRaw) {
           if (!unique.has(entry.username) || entry.score > unique.get(entry.username).score) {
@@ -290,15 +286,12 @@ export default function App() {
           }
         }
         const scores = Array.from(unique.values());
-        // Step 3: sort and take top 10
         scores.sort((a, b) => b.score - a.score);
         const topScores = scores.slice(0, 10);
 
-        // Step 4: Map wallet addresses to usernames if available
         const addresses = Array.from(new Set(topScores.map(entry => entry.username)));
         let addressToUser = {};
         if (addresses.length) {
-          // Firebase 'in' clause has a limit of 10, so batch if needed
           const batches = [];
           for (let i = 0; i < addresses.length; i += 10) {
             batches.push(addresses.slice(i, i + 10));
@@ -316,7 +309,6 @@ export default function App() {
           }
         }
 
-        // Step 5: Map each leaderboard entry address to username (fallback to address if missing)
         const resolvedScores = topScores.map(entry => ({
           ...entry,
           displayName: addressToUser[entry.username] || entry.username
@@ -331,7 +323,6 @@ export default function App() {
     fetchLeaderboard();
   }, [isGameOver, walletAddress]);
 
-  // Default for all non-game layers
   const commonBackgroundStyle = {
     backgroundImage: `url(${backgroundImg})`,
     backgroundSize: "cover",
@@ -339,13 +330,11 @@ export default function App() {
     overflow: "hidden",
   };
 
-  // Dynamic background for game container only
   const gameBackgroundStyle = {
     ...commonBackgroundStyle,
     backgroundImage: `url(${getBackgroundImage(score)})`,
   };
 
-  // Copy address handler for leaderboard
   const handleCopy = (address, event) => {
     navigator.clipboard.writeText(address);
     const x = event.clientX;
@@ -358,7 +347,6 @@ export default function App() {
   return (
     <AptosWalletAdapterProvider plugins={wallets} autoConnect={false}>
       <div className={`app-container ${isVibrating ? "vibrating" : ""}`} style={commonBackgroundStyle}>
-        {/* Title Screen */}
         {activeLayer === "title" && (
           <div className="title-screen" style={commonBackgroundStyle}>
             <TitleScreen
@@ -370,14 +358,12 @@ export default function App() {
           </div>
         )}
 
-        {/* Game Container */}
         {activeLayer === "game" && (
           <div
             className={`game-container${isVibrating ? " vibrating" : ""}`}
             onClick={handleJump}
             style={gameBackgroundStyle}
           >
-            {/* Home Button */}
             <button
               className="home-button"
               onClick={() => setActiveLayer("title")}
@@ -396,8 +382,6 @@ export default function App() {
             >
               🏠
             </button>
-
-            {/* Score Display */}
             {!isGameOver && (
               <div
                 className="score-display"
@@ -416,8 +400,6 @@ export default function App() {
                 Score: {score}
               </div>
             )}
-
-            {/* Lives Display */}
             {!isGameOver && (
               <div
                 className="lives-display"
@@ -437,8 +419,6 @@ export default function App() {
                 Lives: {lives}
               </div>
             )}
-
-            {/* Game Over Screen */}
             {isGameOver && (
               <div className="game-over-screen">
                 <h2>Game Over</h2>
@@ -460,10 +440,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Sidebar with Wallet and NFT Display */}
         {activeLayer === "sidebar-with-wallet" && (
           <div className="sidebar" style={commonBackgroundStyle}>
-            {/* Home Button */}
             <button
               className="home-button"
               onClick={() => setActiveLayer("title")}
@@ -533,7 +511,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Username Modal (show on connect if new, or on edit) */}
         {showUsernameModal && (
           <UsernameModal
             onSubmit={handleUsernameSubmit}
@@ -542,7 +519,6 @@ export default function App() {
           />
         )}
 
-        {/* Leaderboard Sidebar */}
         {activeLayer === "leaderboard" && (
           <div className="sidebar" style={commonBackgroundStyle}>
             <div
@@ -557,7 +533,6 @@ export default function App() {
                 position: "relative",
               }}
             >
-              {/* Home Button */}
               <button
                 className="home-button"
                 onClick={() => setActiveLayer("title")}
@@ -605,7 +580,6 @@ export default function App() {
                   </li>
                 ))}
               </ul>
-              {/* Copied popup */}
               {copied && (
                 <span
                   className="copied-popup"
@@ -642,7 +616,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Social Links Layer */}
         {activeLayer === "social" && (
           <div className="info-sidebar" style={commonBackgroundStyle}>
             <h4>Official Links</h4>
