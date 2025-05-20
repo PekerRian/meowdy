@@ -157,6 +157,7 @@ body, html, #root {
 }
 
 .sidebar h4 {
+  max-width: 330px;
   font-size: 22px;
   margin-bottom: 15px;
   text-align: center;

@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { request } from "graphql-request";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import "./NFTDisplay.css";
 
 // Constants
-const APTOS_GRAPHQL_URL = "https://indexer.mainnet.aptoslabs.com/v1/graphql";
+const APTOS_GRAPHQL_URL = "https://api.mainnet.aptoslabs.com/v1/graphql"; // Use official endpoint
 const COLLECTION_ID = "0x1b33bf929377dbe1f17139d30b512186a7335d0ffc7766b8d69932c370e02a06";
 
 const NFTDisplay = ({ onMeowdyCountChange }) => {
@@ -12,7 +12,10 @@ const NFTDisplay = ({ onMeowdyCountChange }) => {
   const [nfts, setNfts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [meowdyCount, setMeowdyCount] = useState(0); // New state for Meowdy count
+  const [meowdyCount, setMeowdyCount] = useState(0);
+
+  // Persisted flag to prevent future fetches after a successful fetch
+  const fetchedRef = useRef(false);
 
   // Utility function to convert Uint8Array to hex string
   const uint8ArrayToHex = (uint8Array) =>
@@ -20,8 +23,33 @@ const NFTDisplay = ({ onMeowdyCountChange }) => {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
 
+  // Fetch and log the collection name
+  const fetchCollectionName = useCallback(async (collectionId) => {
+    try {
+      const collectionQuery = `
+        query GetCollectionName($collection_id: String) {
+          current_collections_v2(where: { collection_id: { _eq: $collection_id } }) {
+            collection_name
+          }
+        }
+      `;
+      const variables = { collection_id: collectionId };
+      const response = await request(APTOS_GRAPHQL_URL, collectionQuery, variables);
+      const collectionName = response?.current_collections_v2?.[0]?.collection_name;
+      if (collectionName) {
+        console.log("Collection name for", collectionId, "is:", collectionName);
+      } else {
+        console.log("No collection found for", collectionId);
+      }
+    } catch (e) {
+      console.error("Failed to fetch collection name:", e);
+    }
+  }, []);
+
   // Fetch NFTs based on the connected wallet
   const fetchNFTs = useCallback(async () => {
+    if (fetchedRef.current) return; // Prevent fetching again if already fetched successfully
+
     if (!connected || !account) {
       console.log("Wallet not connected or account unavailable.");
       return;
@@ -71,8 +99,10 @@ const NFTDisplay = ({ onMeowdyCountChange }) => {
 
       if (!nftData.length) {
         setNfts([]);
-        setMeowdyCount(0); // Update Meowdy count to 0 if no NFTs are found
-        if (onMeowdyCountChange) onMeowdyCountChange(0); // Notify parent with 0 count
+        setMeowdyCount(0);
+        if (onMeowdyCountChange) onMeowdyCountChange(0);
+        setLoading(false);
+        fetchedRef.current = true; // Mark as fetched even if empty, so it does not retry
         return;
       }
 
@@ -111,18 +141,18 @@ const NFTDisplay = ({ onMeowdyCountChange }) => {
         nftsWithMetadata.push(...batchResults.map((result) => (result.status === "fulfilled" ? result.value : null)));
       }
 
-      setNfts(nftsWithMetadata.filter(Boolean)); // Remove failed results
-
-      // Calculate the Meowdy count
+      setNfts(nftsWithMetadata.filter(Boolean));
       const meowdyCount = nftsWithMetadata.filter((nft) =>
         nft?.current_token_data?.token_name?.toLowerCase().includes("meowdy")
       ).length;
       setMeowdyCount(meowdyCount);
-      if (onMeowdyCountChange) onMeowdyCountChange(meowdyCount); // Notify parent component with new count
+      if (onMeowdyCountChange) onMeowdyCountChange(meowdyCount);
+
+      fetchedRef.current = true; // Mark as fetched so we don't fetch again
     } catch (err) {
       if (err.response?.status === 429) {
-        console.error("Rate limit exceeded. Retrying...");
-        setTimeout(fetchNFTs, 5000); // Retry after 5 seconds
+        console.error("Rate limit exceeded. Try again later.");
+        setError("Rate limit exceeded. Please try again later.");
       } else {
         console.error("Error fetching NFTs:", err);
         setError("Failed to fetch NFTs. Please try again later.");
@@ -132,10 +162,14 @@ const NFTDisplay = ({ onMeowdyCountChange }) => {
     }
   }, [connected, account, onMeowdyCountChange]);
 
-  // Fetch NFTs on component mount or dependency change
+  // Effect to fetch NFTs and collection name only once after success
   useEffect(() => {
-    fetchNFTs();
-  }, [fetchNFTs]);
+    if (!fetchedRef.current) {
+      fetchNFTs();
+      fetchCollectionName(COLLECTION_ID);
+    }
+    // eslint-disable-next-line
+  }, [fetchNFTs, fetchCollectionName]);
 
   if (!connected) {
     return <p>Please connect your wallet to view NFTs.</p>;
@@ -147,7 +181,7 @@ const NFTDisplay = ({ onMeowdyCountChange }) => {
       {error && <p className="error">{error}</p>}
       {!loading && !error && nfts.length > 0 ? (
         <>
-          <h3>Meowdy Count: {meowdyCount}</h3> {/* Display Meowdy Count */}
+          <h3>Meowdy Count: {meowdyCount}</h3>
           <div className="nft-grid">
             {nfts.map((nft, index) => (
               <div key={index} className="nft-item">

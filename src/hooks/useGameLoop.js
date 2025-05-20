@@ -1,4 +1,7 @@
 import { useEffect, useState, useRef } from "react";
+// --- FIREBASE IMPORTS ---
+import { collection, query, where, getDocs, updateDoc } from "firebase/firestore";
+import { db } from "../database/firebase"; // adjust path as needed
 
 const jumpSound = new Audio("/assets/jump.ogg");
 const gameOverSound = new Audio("/assets/gameover.ogg");
@@ -15,7 +18,18 @@ const Meow_WIDTH = 34;
 const Meow_HEIGHT = 24;
 const Meow_X = 50;
 
-export default function useGameLoop(onGameOver, nftCount = 1) {
+// Helper function to get background image based on score
+function getBackgroundImage(score) {
+  const index = Math.min(Math.floor(score / 5), 16);
+  return `/assets/background${index}.png`;
+}
+
+/**
+ * @param {function} onGameOver - called when game ends (after all lives lost)
+ * @param {number} nftCount
+ * @param {string} walletAddress - user's wallet address
+ */
+export default function useGameLoop(onGameOver, nftCount = 1, walletAddress = "") {
   const [MeowY, setMeowY] = useState(250);
   const [pipes, setPipes] = useState([]);
   const [score, setScore] = useState(0);
@@ -109,6 +123,35 @@ export default function useGameLoop(onGameOver, nftCount = 1) {
     return () => cancelAnimationFrame(animationFrameId.current);
   }, [isGameStarted, MeowY, pipes, isInvulnerable]);
 
+  // --- UPDATE HIGHSCORE ON GAME OVER ---
+  const updateHighScoreForWallet = async () => {
+    if (!walletAddress) {
+      console.warn("No wallet address given, skipping update.");
+      return;
+    }
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("accountAddress", "==", walletAddress));
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const userDoc = snapshot.docs[0];
+        const data = userDoc.data();
+        console.log("Current user data:", data);
+        if (score > (data.highestScore || 0)) {
+          await updateDoc(userDoc.ref, { highestScore: score });
+          console.log("High score updated!");
+        } else {
+          console.log("Score not higher than existing high score.");
+        }
+      } else {
+        console.warn("No user found in users collection for", walletAddress);
+      }
+    } catch (e) {
+      console.error("Error updating high score:", e);
+    }
+  };
+
   const handleCollision = () => {
     setIsVibrating(true);
     setIsBlinking(true);
@@ -128,7 +171,10 @@ export default function useGameLoop(onGameOver, nftCount = 1) {
       setLives((prev) => prev - 1);
     } else {
       stopGame();
-      onGameOver?.();
+      // On game over, update highscore if needed
+      updateHighScoreForWallet().then(() => {
+        onGameOver?.();
+      });
     }
   };
 
@@ -161,6 +207,9 @@ export default function useGameLoop(onGameOver, nftCount = 1) {
     setIsGameStarted(true);
   };
 
+  // Add the backgroundImage to returned object
+  const backgroundImage = getBackgroundImage(score);
+
   return {
     MeowY,
     pipes,
@@ -173,5 +222,6 @@ export default function useGameLoop(onGameOver, nftCount = 1) {
     lives,
     isBlinking,
     isVibrating,
+    backgroundImage, // <- use this in your JSX
   };
 }
